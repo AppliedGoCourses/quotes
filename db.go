@@ -25,26 +25,25 @@ func Open(path string) (*DB, error) {
 	}, nil
 }
 
-func (d *DB) Create(q *Quote) error {
+func (d *DB) Put(q *Quote) error {
 	err := d.db.Update(func(tx *bolt.Tx) error {
 
 		bucket, err := tx.CreateBucketIfNotExists([]byte(quoteBucket))
 		if err != nil {
-			return errors.Wrapf(err, "Create: cannot open or create bucket %s", []byte(quoteBucket))
+			return errors.Wrapf(err, "Put: cannot open or create bucket %s", []byte(quoteBucket))
 		}
 
 		b, err := q.Serialize()
 		err = bucket.Put([]byte(q.Author), b)
 		if err != nil {
-			return errors.Wrapf(err, "Create: cannot put quote %d into bucket", q.ID)
+			return errors.Wrapf(err, "Put: cannot put quote %d into bucket", q.ID)
 		}
 		return nil
 	})
 
 	if err != nil {
-		return errors.Wrapf(err, "Create: cannot create record for (%s|%s|%s)", q.Author, q.Text, q.Source)
+		return errors.Wrapf(err, "Put: cannot create record for (%s|%s|%s)", q.Author, q.Text, q.Source)
 	}
-
 	return nil
 }
 
