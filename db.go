@@ -30,7 +30,7 @@ func (d *DB) Create(q *Quote) error {
 
 		bucket, err := tx.CreateBucketIfNotExists([]byte(quoteBucket))
 		if err != nil {
-			return errors.Wrapf(err, "Create: cannot create bucket %s", []byte(quoteBucket))
+			return errors.Wrapf(err, "Create: cannot open or create bucket %s", []byte(quoteBucket))
 		}
 
 		b, err := q.Serialize()
