@@ -1,6 +1,7 @@
 package quotes
 
 import (
+	"os"
 	"reflect"
 	"testing"
 
@@ -39,22 +40,27 @@ func TestOpen(t *testing.T) {
 	}
 }
 
-func TestDB_Create(t *testing.T) {
+func TestDB_Put(t *testing.T) {
 	tests := []struct {
 		name  string
 		quote Quote
 	}{
-		{"01", Quote{ID: 7, Author: "007", Text: "Shaken, not stirred", Source: "Diamonds Are Forever"}},
+		{"Create", Quote{ID: 7, Author: "007", Text: "Shaken, not stirred", Source: "Diamonds Are Forever"}},
+		{"Update", Quote{ID: 7, Author: "007", Text: "Shaken, not stirred", Source: "Diamonds Are Forever"}},
 	}
 	path := "testdata/db"
+
+	// Setup
 	d, err := Open(path)
 	if err != nil {
 		t.Errorf("Open(): Cannot open %s", path)
 	}
+
+	// Test
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err = d.Create(&tt.quote); err != nil {
-				t.Errorf("DB.Create() error = %v", err)
+			if err = d.Put(&tt.quote); err != nil {
+				t.Errorf("DB.Put() error = %v", err)
 			}
 			q, err := d.Get(tt.quote.Author)
 			if err != nil {
@@ -65,7 +71,16 @@ func TestDB_Create(t *testing.T) {
 			}
 		})
 	}
-	d.db.Close()
+
+	// Teardown
+	err = d.db.Close()
+	if err != nil {
+		t.Fatalf("Cannot close %s", path)
+	}
+	err = os.Remove(path)
+	if err != nil {
+		t.Fatalf("Cannot remove %s", path)
+	}
 }
 
 func TestDB_Get(t *testing.T) {
