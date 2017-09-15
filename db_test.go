@@ -4,11 +4,9 @@ import (
 	"os"
 	"reflect"
 	"testing"
-
-	"github.com/coreos/bbolt"
 )
 
-func TestOpen(t *testing.T) {
+func TestOpenClose(t *testing.T) {
 	type args struct {
 		path string
 	}
@@ -35,25 +33,28 @@ func TestOpen(t *testing.T) {
 			if got.db.Path() != path {
 				t.Error("Open(): path = %s, expected = %s", got.db.Path(), path)
 			}
-			got.db.Close()
+			err = got.Close()
+			if err != nil {
+				t.Errorf("Cannot close database %s", path)
+			}
 		})
 	}
 }
 
-func TestDB_Put(t *testing.T) {
+func TestDB_PutAndGet(t *testing.T) {
 	tests := []struct {
 		name  string
 		quote Quote
 	}{
-		{"Create", Quote{ID: 7, Author: "007", Text: "Shaken, not stirred", Source: "Diamonds Are Forever"}},
-		{"Update", Quote{ID: 7, Author: "007", Text: "Shaken, not stirred", Source: "Diamonds Are Forever"}},
+		{"Create", Quote{Author: "007", Text: "Stirred, not shaken", Source: "Graphite is ephemeral"}},
+		{"Update", Quote{Author: "007", Text: "Shaken, not stirred", Source: "Diamonds Are Forever"}},
 	}
-	path := "testdata/db"
+	path := "testdata/putgetdb"
 
 	// Setup
 	d, err := Open(path)
 	if err != nil {
-		t.Errorf("Open(): Cannot open %s", path)
+		t.Fatalf("Open(): Cannot open %s", path)
 	}
 
 	// Test
@@ -73,45 +74,65 @@ func TestDB_Put(t *testing.T) {
 	}
 
 	// Teardown
-	err = d.db.Close()
+	err = d.Close()
 	if err != nil {
-		t.Fatalf("Cannot close %s", path)
+		t.Errorf("Cannot close %s", path)
 	}
 	err = os.Remove(path)
 	if err != nil {
-		t.Fatalf("Cannot remove %s", path)
+		t.Errorf("Cannot remove %s", path)
 	}
 }
 
-func TestDB_Get(t *testing.T) {
-	type fields struct {
-		db *bolt.DB
-	}
-	type args struct {
-		author string
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    *Quote
-		wantErr bool
+func TestDB_List(t *testing.T) {
+	tt := struct {
+		data, want []*Quote
 	}{
-	// TODO: Add test cases.
+		[]*Quote{
+			&Quote{Author: "Leo Babauta", Text: "This statement is completely mis-quoted."},
+			&Quote{Author: "Leo Babauta", Text: "The value of doing is so much greater than the value of being safe and doing nothing."},
+			&Quote{Author: "Albert Szent-Györgyi", Text: "Discovery consists of seeing what everybody has seen and thinking what nobody has thought."},
+		},
+		[]*Quote{
+			// The items in the DB are sorted, due to the
+			// internal B+tree data structure. Hence the output of List()
+			// is expected to be sorted by author.
+			&Quote{Author: "Albert Szent-Györgyi", Text: "Discovery consists of seeing what everybody has seen and thinking what nobody has thought."},
+			&Quote{Author: "Leo Babauta", Text: "The value of doing is so much greater than the value of being safe and doing nothing."},
+		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			d := &DB{
-				db: tt.fields.db,
-			}
-			got, err := d.Get(tt.args.author)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("DB.Get() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("DB.Get() = %v, want %v", got, tt.want)
-			}
-		})
+	path := "testdata/listdb"
+
+	// Setup
+	d, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open(): Cannot open %s", path)
+	}
+	// Fill the DB
+	for _, q := range tt.data {
+		err := d.Put(q)
+		if err != nil {
+			t.Fatalf("Cannot fill test database: " + err.Error())
+		}
+	}
+
+	// Test
+	got, err := d.List()
+	if err != nil {
+		t.Errorf("DB.List() error = %v", err)
+		return
+	}
+	if !reflect.DeepEqual(got, tt.want) {
+		t.Errorf("DB.List() = %v, want %v", got, tt.want)
+	}
+
+	// Teardown
+	err = d.Close()
+	if err != nil {
+		t.Errorf("Cannot close %s", path)
+	}
+	err = os.Remove(path)
+	if err != nil {
+		t.Errorf("Cannot remove %s", path)
 	}
 }
