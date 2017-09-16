@@ -45,8 +45,8 @@ func (d *DB) Create(q *Quote) error {
 
 		// Ensure we do not accidentally update a record
 		v := bucket.Get([]byte(q.Author))
-		if len(v) == 0 {
-			return errors.Errorf("Author $s already exists", q.Author)
+		if len(v) > 0 {
+			return errors.Errorf("Author %s already exists", q.Author)
 		}
 
 		// Turn the Quote into []byte and save it in the bucket.
