@@ -33,26 +33,60 @@ func (d *DB) Close() error {
 	return nil
 }
 
-// Put takes a quote and saves it to the database, using the author name
-// as the key.
-func (d *DB) Put(q *Quote) error {
+// Create takes a quote and saves it to the database, using the author name
+// as the key. If the author already exists, Create returns an error.
+func (d *DB) Create(q *Quote) error {
 	err := d.db.Update(func(tx *bolt.Tx) error {
 
 		bucket, err := tx.CreateBucketIfNotExists([]byte(quoteBucket))
 		if err != nil {
-			return errors.Wrapf(err, "Put: cannot open or create bucket %s", []byte(quoteBucket))
+			return errors.Wrapf(err, "Create: cannot open or create bucket %s", []byte(quoteBucket))
 		}
 
+		// Ensure we do not accidentally update a record
+		v := bucket.Get([]byte(q.Author))
+		if len(v) == 0 {
+			return errors.Errorf("Author $s already exists", q.Author)
+		}
+
+		// Turn the Quote into []byte and save it in the bucket.
 		b, err := q.Serialize()
 		err = bucket.Put([]byte(q.Author), b)
 		if err != nil {
-			return errors.Wrapf(err, "Put: cannot put quote from %s into bucket", q.Author)
+			return errors.Wrapf(err, "Create: cannot put quote from %s into bucket", q.Author)
 		}
 		return nil
 	})
 
 	if err != nil {
-		return errors.Wrapf(err, "Put: cannot create record for (%s|%s|%s)", q.Author, q.Text, q.Source)
+		return errors.Wrapf(err, "Create: cannot create record for (%s|%s|%s)", q.Author, q.Text, q.Source)
+	}
+	return nil
+}
+
+// Update takes a quote and updates the corresponding database entry.
+// If the entry does not exist, Update returns an error.
+func (d *DB) Update(q *Quote) error {
+	err := d.db.Update(func(tx *bolt.Tx) error {
+
+		bucket := tx.Bucket([]byte(quoteBucket))
+		if bucket == nil {
+			return errors.Errorf("Update: cannot open bucket %s", []byte(quoteBucket))
+		}
+
+		// Ensure the entry exists - we do not want to accidentally insert
+		// a new entry, as the definite goal is to update an existing one.
+
+		b, err := q.Serialize()
+		err = bucket.Put([]byte(q.Author), b)
+		if err != nil {
+			return errors.Wrapf(err, "Update: cannot update quote from %s in bucket", q.Author)
+		}
+		return nil
+	})
+
+	if err != nil {
+		return errors.Wrapf(err, "Update: cannot update record of (%s|%s|%s)", q.Author, q.Text, q.Source)
 	}
 	return nil
 }
@@ -61,11 +95,11 @@ func (d *DB) Put(q *Quote) error {
 func (d *DB) Get(author string) (*Quote, error) {
 	q := &Quote{}
 	err := d.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(quoteBucket))
-		if b == nil {
-			return errors.Errorf("Cannot get %s - there is no bucket named %s", author, quoteBucket)
+		bucket := tx.Bucket([]byte(quoteBucket))
+		if bucket == nil {
+			return errors.Errorf("Cannot get %s - bucket %s not found", author, quoteBucket)
 		}
-		v := b.Get([]byte(author))
+		v := bucket.Get([]byte(author))
 		err := q.Deserialize(v)
 		if err != nil {
 			return errors.Wrapf(err, "Get: cannot deserialize %s", v)
