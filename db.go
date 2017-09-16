@@ -64,33 +64,6 @@ func (d *DB) Create(q *Quote) error {
 	return nil
 }
 
-// Update takes a quote and updates the corresponding database entry.
-// If the entry does not exist, Update returns an error.
-func (d *DB) Update(q *Quote) error {
-	err := d.db.Update(func(tx *bolt.Tx) error {
-
-		bucket := tx.Bucket([]byte(quoteBucket))
-		if bucket == nil {
-			return errors.Errorf("Update: cannot open bucket %s", []byte(quoteBucket))
-		}
-
-		// Ensure the entry exists - we do not want to accidentally insert
-		// a new entry, as the definite goal is to update an existing one.
-
-		b, err := q.Serialize()
-		err = bucket.Put([]byte(q.Author), b)
-		if err != nil {
-			return errors.Wrapf(err, "Update: cannot update quote from %s in bucket", q.Author)
-		}
-		return nil
-	})
-
-	if err != nil {
-		return errors.Wrapf(err, "Update: cannot update record of (%s|%s|%s)", q.Author, q.Text, q.Source)
-	}
-	return nil
-}
-
 // Get takes an author name and retrieves the corresponding quote from the DB.
 func (d *DB) Get(author string) (*Quote, error) {
 	q := &Quote{}
