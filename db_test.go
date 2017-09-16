@@ -31,7 +31,7 @@ func TestOpenClose(t *testing.T) {
 				t.Error("Open(): got.db == nil")
 			}
 			if got.db.Path() != path {
-				t.Error("Open(): path = %s, expected = %s", got.db.Path(), path)
+				t.Errorf("Open(): path = %s, expected = %s", got.db.Path(), path)
 			}
 			err = got.Close()
 			if err != nil {
@@ -41,7 +41,7 @@ func TestOpenClose(t *testing.T) {
 	}
 }
 
-func TestDB_PutAndGet(t *testing.T) {
+func TestDB_CreateAndGet(t *testing.T) {
 	tests := []struct {
 		name  string
 		quote Quote
@@ -60,7 +60,7 @@ func TestDB_PutAndGet(t *testing.T) {
 	// Test
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err = d.Put(&tt.quote); err != nil {
+			if err = d.Create(&tt.quote); err != nil {
 				t.Errorf("DB.Put() error = %v", err)
 			}
 			q, err := d.Get(tt.quote.Author)
@@ -110,7 +110,7 @@ func TestDB_List(t *testing.T) {
 	}
 	// Fill the DB
 	for _, q := range tt.data {
-		err := d.Put(q)
+		err := d.Create(q)
 		if err != nil {
 			t.Fatalf("Cannot fill test database: " + err.Error())
 		}
