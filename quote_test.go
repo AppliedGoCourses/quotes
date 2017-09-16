@@ -10,7 +10,8 @@ func TestQuote_SerializeDeserialize(t *testing.T) {
 		name  string
 		quote Quote
 	}{
-		{"Test01", Quote{Author: "Test", Text: "This is a test", Source: "unknown"}},
+		{"01", Quote{Author: "Test", Text: "This is a test", Source: "unknown"}},
+		{"02", Quote{Author: "Test", Text: "This is a test", Source: ""}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
