@@ -10,9 +10,9 @@ import (
 
 // Quote represents a quote, inlcuding its author and an optional source. The ID is a unique key.
 type Quote struct {
-	Author string `json:author`
-	Text   string `json:text`
-	Source string `json:source`
+	Author string `json:"author"`
+	Text   string `json:"text"`
+	Source string `json:"source,omitempty"`
 }
 
 // Serialize returns a gob encoding of quote q.
