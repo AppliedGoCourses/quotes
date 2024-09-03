@@ -1,0 +1,1 @@
+This file exists to be able to add the testdata folder to Git. go test otherwise complains about a missing folder as it does not create the folder automatically.
